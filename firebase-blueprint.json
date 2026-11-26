@@ -1,0 +1,262 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user profile and ChessAI Pro workspace preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "preferredTheme": {
+          "type": "string",
+          "enum": ["dark", "light"]
+        },
+        "boardTheme": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "pieceStyle": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "engineDepth": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "preferredTheme",
+        "boardTheme",
+        "pieceStyle",
+        "engineDepth",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedGame": {
+      "title": "SavedGame",
+      "description": "Saved chess game PGN with metadata and review accuracy estimates.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "white": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "black": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "result": {
+          "type": "string",
+          "enum": ["1-0", "0-1", "1/2-1/2", "*"]
+        },
+        "eco": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "openingName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "pgn": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "initialFen": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["analysis", "ai_game", "review"]
+        },
+        "accuracyWhite": {
+          "type": "number"
+        },
+        "accuracyBlack": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "white",
+        "black",
+        "result",
+        "eco",
+        "openingName",
+        "pgn",
+        "initialFen",
+        "mode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AnalysisRecord": {
+      "title": "AnalysisRecord",
+      "description": "Saved Stockfish position analysis and optional AI coach summary.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fen": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "bestMove": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "evalDisplay": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "topLines": {
+          "type": "array"
+        },
+        "coachSummary": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "fen",
+        "depth",
+        "bestMove",
+        "evalDisplay",
+        "topLines",
+        "coachSummary",
+        "createdAt"
+      ]
+    },
+    "TrainingProgress": {
+      "title": "TrainingProgress",
+      "description": "User puzzle and endgame training completion progress.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "puzzleId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "category": {
+          "type": "string",
+          "enum": ["tactics", "checkmate", "opening", "endgame"]
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced", "master"]
+        },
+        "solved": {
+          "type": "boolean"
+        },
+        "attempts": {
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "puzzleId",
+        "category",
+        "difficulty",
+        "solved",
+        "attempts",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and board/engine preferences."
+    },
+    "/users/{userId}/games/{gameId}": {
+      "schema": { "$ref": "#/entities/SavedGame" },
+      "description": "User's saved PGN games and post-game reviews."
+    },
+    "/users/{userId}/analyses/{analysisId}": {
+      "schema": { "$ref": "#/entities/AnalysisRecord" },
+      "description": "User's saved Stockfish position analyses."
+    },
+    "/users/{userId}/training/{progressId}": {
+      "schema": { "$ref": "#/entities/TrainingProgress" },
+      "description": "User's puzzle and endgame training progress records."
+    }
+  }
+}

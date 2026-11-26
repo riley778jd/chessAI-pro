@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function parentUserExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'email', 'preferredTheme',
+          'boardTheme', 'pieceStyle', 'engineDepth', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'preferredTheme',
+          'boardTheme', 'pieceStyle', 'engineDepth', 'createdAt', 'updatedAt'
+        ])
+        && data.uid is string && data.uid == userId && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.preferredTheme is string && data.preferredTheme in ['dark', 'light']
+        && data.boardTheme is string && data.boardTheme.size() >= 1 && data.boardTheme.size() <= 40
+        && data.pieceStyle is string && data.pieceStyle.size() >= 1 && data.pieceStyle.size() <= 40
+        && data.engineDepth is int && data.engineDepth >= 4 && data.engineDepth <= 24
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSavedGame(data, userId, gameId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'white', 'black', 'result',
+          'eco', 'openingName', 'pgn', 'initialFen', 'mode', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'white', 'black', 'result',
+          'eco', 'openingName', 'pgn', 'initialFen', 'mode',
+          'accuracyWhite', 'accuracyBlack', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == gameId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.white is string && data.white.size() >= 1 && data.white.size() <= 80
+        && data.black is string && data.black.size() >= 1 && data.black.size() <= 80
+        && data.result is string && data.result in ['1-0', '0-1', '1/2-1/2', '*']
+        && data.eco is string && data.eco.size() <= 10
+        && data.openingName is string && data.openingName.size() <= 120
+        && data.pgn is string && data.pgn.size() <= 20000
+        && data.initialFen is string && data.initialFen.size() >= 10 && data.initialFen.size() <= 128
+        && data.mode is string && data.mode in ['analysis', 'ai_game', 'review']
+        && (!data.keys().hasAny(['accuracyWhite']) || (data.accuracyWhite is number && data.accuracyWhite >= 0 && data.accuracyWhite <= 100))
+        && (!data.keys().hasAny(['accuracyBlack']) || (data.accuracyBlack is number && data.accuracyBlack >= 0 && data.accuracyBlack <= 100))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAnalysisRecord(data, userId, analysisId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'fen', 'depth', 'bestMove',
+          'evalDisplay', 'topLines', 'coachSummary', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'fen', 'depth', 'bestMove',
+          'evalDisplay', 'topLines', 'coachSummary', 'createdAt'
+        ])
+        && data.id is string && data.id == analysisId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid
+        && data.fen is string && data.fen.size() >= 10 && data.fen.size() <= 128
+        && data.depth is int && data.depth >= 1 && data.depth <= 30
+        && data.bestMove is string && data.bestMove.size() <= 20
+        && data.evalDisplay is string && data.evalDisplay.size() <= 24
+        && data.topLines is list && data.topLines.size() <= 5
+        && (data.topLines.size() == 0 || (data.topLines[0] is string && data.topLines[0].size() <= 250))
+        && data.coachSummary is string && data.coachSummary.size() <= 4000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidTrainingProgress(data, userId, progressId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'puzzleId', 'category', 'difficulty',
+          'solved', 'attempts', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'puzzleId', 'category', 'difficulty',
+          'solved', 'attempts', 'updatedAt'
+        ])
+        && data.id is string && data.id == progressId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid
+        && data.puzzleId is string && data.puzzleId.size() >= 1 && data.puzzleId.size() <= 64
+        && data.category is string && data.category in ['tactics', 'checkmate', 'opening', 'endgame']
+        && data.difficulty is string && data.difficulty in ['beginner', 'intermediate', 'advanced', 'master']
+        && data.solved is bool
+        && data.attempts is int && data.attempts >= 0 && data.attempts <= 1000
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'preferredTheme', 'boardTheme', 'pieceStyle', 'engineDepth', 'updatedAt'
+        ]);
+      allow delete: if isVerifiedUser() && isValidId(userId) && isOwner(userId);
+
+      match /games/{gameId} {
+        allow get: if isValidId(userId) && isValidId(gameId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(gameId)
+          && isOwner(userId)
+          && isValidSavedGame(incoming(), userId, gameId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId);
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(gameId)
+          && isOwner(userId)
+          && isValidSavedGame(incoming(), userId, gameId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'white', 'black', 'result', 'eco', 'openingName',
+            'pgn', 'accuracyWhite', 'accuracyBlack', 'updatedAt'
+          ])
+          && parentUserExists(userId);
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(gameId) && isOwner(userId);
+      }
+
+      match /analyses/{analysisId} {
+        allow get: if isValidId(userId) && isValidId(analysisId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(analysisId)
+          && isOwner(userId)
+          && isValidAnalysisRecord(incoming(), userId, analysisId)
+          && incoming().createdAt == request.time
+          && parentUserExists(userId);
+        allow update: if false;
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(analysisId) && isOwner(userId);
+      }
+
+      match /training/{progressId} {
+        allow get: if isValidId(userId) && isValidId(progressId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(progressId)
+          && isOwner(userId)
+          && isValidTrainingProgress(incoming(), userId, progressId)
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId);
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(progressId)
+          && isOwner(userId)
+          && isValidTrainingProgress(incoming(), userId, progressId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().puzzleId == existing().puzzleId
+          && incoming().category == existing().category
+          && incoming().difficulty == existing().difficulty
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'solved', 'attempts', 'updatedAt'
+          ])
+          && parentUserExists(userId);
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(progressId) && isOwner(userId);
+      }
+    }
+  }
+}

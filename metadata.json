@@ -1,0 +1,8 @@
+{
+  "name": "ChessAI Pro",
+  "description": "Cross-platform chess analysis platform powered by Stockfish UCI engine, Gemini AI coaching, interactive chessboard, opening explorer, game review, and training centre.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
